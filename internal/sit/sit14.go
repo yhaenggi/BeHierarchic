@@ -31,9 +31,8 @@ package sit
 
 import (
 	"bufio"
-	"math"
-	"io"
 	"fmt"
+	"io"
 )
 
 type SIT14Buffer struct {
@@ -42,22 +41,24 @@ type SIT14Buffer struct {
 }
 
 type SIT14Data struct {
-	br       *bufio.Reader
-	code     [308]uint8
-	codecopy [308]uint8
-	freq     [308]uint16
-	buff     [308]uint32
+	br		*bufio.Reader
+	bitbuf		uint64 // current bit buffer
+	bits		uint16 // number of valid bits in bitbuf
+	code		[308]uint8
+	codecopy	[308]uint8
+	freq		[308]uint16
+	buff		[308]uint32
 
-	var1 [52]uint8
-	var2 [52]uint16
-	var3 [150]uint16 // 75*2
-	var4 [76]uint8
-	var5 [75]uint32
-	var6 [1024]uint8
-	var7 [616]uint16 // 308*2
-	var8 [0x4000]uint8
+	var1		[52]uint8
+	var2		[52]uint16
+	var3		[150]uint16 // 75*2
+	var4		[76]uint8
+	var5		[75]uint32
+	var6		[1024]uint8
+	var7		[616]uint16 // 308*2
+	var8		[0x4000]uint8
 
-	window [0x40000]uint8
+	window		[0x40000]uint8
 }
 
 type SITPrivate struct {
@@ -145,6 +146,34 @@ type SITPrivate struct {
 // Window [0x40000]uint8
 // };
 
+func getBitsLow(s *SIT14Data, bits uint8) uint32 {
+	for s.bits < uint16(bits) {
+		b, err := s.br.ReadByte()
+		if err != nil {
+			panic("sit14: failed to get byte")
+		}
+		s.bitbuf |= uint64(b) << s.bits
+		s.bits += 8
+	}
+
+	mask := uint64((1 << bits) - 1)
+	val := uint32(s.bitbuf & mask)
+
+	s.bitbuf >>= bits
+	s.bits -= uint16(bits)
+
+	return val
+}
+
+func byteBoundary(s *SIT14Data) {
+	if s.bits > 0 {
+		rem := s.bits % 8
+		if rem != 0 {
+			getBitsLow(uint8(rem))
+		}
+	}
+}
+
 // code used to be unit8, using uint16 here for now to avoid casting
 func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
 	var i, j uint16
@@ -185,26 +214,79 @@ func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
 	}
 }
 
-func getBitsLow(br *bufio.Reader, bits uint8) uint32 {
-	
-	return 0
-}
-
-func SIT14_ReadTree(dat *SIT14Data, codesize uint16, result []uint16) {
+func SIT14_ReadTree(s *SIT14Data, codesize uint16, result []uint16) {
 	var size, i, j, k, l, m, n, o uint32
 
-	k = getBitsLow(dat.br, 1)
-	j = getBitsLow(dat.br, 2)+2;
-	o = getBitsLow(dat.br, 3)+1;
+	i = 0
+	k = getBitsLow(s, 1)
+	j = getBitsLow(s, 2)+2;
+	o = getBitsLow(s, 3)+1;
 	size = 1<<j;
 	m = size-1;
 	if k != 0 {
 		k = m - 1
 	} else {
 		// -1 for unisgned int is not allowed in go, underflow manually
-		k = math.MaxUint32
+		k = ^uint32(0)
 	}
 
+	if getBitsLow(s, 2)&1 != 0 {
+		SIT14_ReadTree(s, uint16(size), s.freq[:size*2])
+		for i < uint32(codesize) {
+			l = 0;
+			for {
+				l = uint32(s.freq[l + getBitsLow(s, 1)])
+				n = size << 1
+				if n <= l {
+					break
+				}
+			}
+			l -= n
+			if k != l {
+				if l == m {
+					l = 0
+					for {
+						l = uint32(s.freq[l + getBitsLow(s, 1)])
+						n = size << 1;
+						if n <= l {
+							break
+						}
+					}
+					l += 3 - n
+					for l > 0 {
+						l--
+						s.code[i] = s.code[i-1]
+						i++
+					}
+				} else {
+					s.code[i] = uint8(l + o)
+				}
+			} else {
+				s.code[i] = 0
+			}
+			i++
+		}
+	} else {
+		for i < uint32(codesize) {
+			l = getBitsLow(s, uint8(j))
+			if k != l {
+				if l == m {
+					l = getBitsLow(s, uint8(j)) + 3
+					for l > 0 {
+						l--
+						s.code[i] = s.code[i-1]
+						i++
+					}
+				} else {
+					s.code[i] = uint8(l + o)
+					i++
+				}
+			} else {
+				s.code[i] = 0
+				i++
+			}
+		}
+	}
 	// TODO: continue here
 }
 

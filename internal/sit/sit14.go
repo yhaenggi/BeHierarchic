@@ -157,7 +157,7 @@ func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
 				i++
 			}
 			j--
-			for j < last && code[first] < code[j] {
+			for j > last && code[first] < code[j] {
 				j--
 			}
 			if j > i {

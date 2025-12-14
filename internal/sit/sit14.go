@@ -32,6 +32,8 @@ package sit
 import (
 	"bufio"
 	"math"
+	"io"
+	"fmt"
 )
 
 type SIT14Buffer struct {
@@ -41,7 +43,6 @@ type SIT14Buffer struct {
 
 type SIT14Data struct {
 	br       *bufio.Reader
-	MaxBits  uint16
 	code     [308]uint8
 	codecopy [308]uint8
 	freq     [308]uint16
@@ -203,6 +204,31 @@ func SIT14_ReadTree(dat *SIT14Data, codesize uint16, result []uint16) {
 		// -1 for unisgned int is not allowed in go, underflow manually
 		k = math.MaxUint32
 	}
+
+	// TODO: continue here
+}
+
+func sit14(r io.Reader, dstsize uint32) io.ReadCloser {
+	pr, pw := io.Pipe()
+	go sit14copy(pw, r, dstsize)
+	return pr
+}
+
+func sit14copy(dst *io.PipeWriter, src io.Reader, dstsize uint32) {
+	defer func() {
+		if r := recover(); r != nil {
+			dst.CloseWithError(fmt.Errorf("internal StuffIt/SIT14 panic: %v", r))
+		} else {
+			dst.Close()
+		}
+	}()
+
+	var s SIT14Data
+	s.br = bufio.NewReaderSize(src, 4096)
+	bw := bufio.NewWriterSize(dst, 4096)
+	defer bw.Flush()
+
+	//TODO: continue here
 }
 
 // func SIT14_ReadTree(SIT14Data *dat, uint16 codesize, uint16 *result) void {

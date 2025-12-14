@@ -31,10 +31,17 @@ package sit
 
 import (
 	"bufio"
+	"math"
 )
+
+type SIT14Buffer struct {
+	data uint16
+	bits int8
+}
 
 type SIT14Data struct {
 	br       *bufio.Reader
+	MaxBits  uint16
 	code     [308]uint8
 	codecopy [308]uint8
 	freq     [308]uint16
@@ -177,123 +184,148 @@ func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
 	}
 }
 
-// func  SIT14_ReadTree(SIT14Data *dat, uint16 codesize, uint16 *result) void {
-// var size, i, j, k, l, m, n, o uint32
+func getBitsLow(br *bufio.Reader, bits uint8) uint32 {
+	
+	return 0
+}
 
-//   k = xadIOGetBitsLow(dat.io, 1);
-//   j = xadIOGetBitsLow(dat.io, 2)+2;
-//   o = xadIOGetBitsLow(dat.io, 3)+1;
-//   size = 1<<j;
-//   m = size-1;
-//   k = k ? m-1 : -1;
-//   if(xadIOGetBitsLow(dat.io, 2)&1) /* skip 1 bit! */
-//   {
-//     /* requirements for this call: dat.buff[32], dat.code[32], dat.freq[32*2] */
-//     SIT14_ReadTree(dat, size, dat.freq);
-//     for(i = 0; i < codesize; )
-//     {
-//       l = 0;
-//       do
-//       {
-//         l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
-//         n = size<<1;
-//       } while(n > l);
-//       l -= n;
-//       if(k != l)
-//       {
-//         if(l == m)
-//         {
-//           l = 0;
-//           do
-//           {
-//             l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
-//             n = size<<1;
-//           } while(n > l);
-//           l += 3-n;
-//           while(l--)
-//           {
-//             dat.code[i] = dat.code[i-1];
-//             ++i;
-//           }
-//         }
-//         else
-//           dat.code[i++] = l+o;
-//       }
-//       else
-//         dat.code[i++] = 0;
-//     }
-//   }
-//   else
-//   {
-//     for(i = 0; i < codesize; )
-//     {
-//       l = xadIOGetBitsLow(dat.io, j);
-//       if(k != l)
-//       {
-//         if(l == m)
-//         {
-//           l = xadIOGetBitsLow(dat.io, j)+3;
-//           while(l--)
-//           {
-//             dat.code[i] = dat.code[i-1];
-//             ++i;
-//           }
-//         }
-//         else
-//           dat.code[i++] = l+o;
-//       }
-//       else
-//         dat.code[i++] = 0;
-//     }
-//   }
+func SIT14_ReadTree(dat *SIT14Data, codesize uint16, result []uint16) {
+	var size, i, j, k, l, m, n, o uint32
 
-//   for(i = 0; i < codesize; ++i)
-//   {
-//     dat.codecopy[i] = dat.code[i];
-//     dat.freq[i] = i;
-//   }
-//   SIT14_Update(0, codesize, dat.codecopy, dat.freq);
+	k = getBitsLow(dat.br, 1)
+	j = getBitsLow(dat.br, 2)+2;
+	o = getBitsLow(dat.br, 3)+1;
+	size = 1<<j;
+	m = size-1;
+	if k != 0 {
+		k = m - 1
+	} else {
+		// -1 for unisgned int is not allowed in go, underflow manually
+		k = math.MaxUint32
+	}
+}
 
-//   for(i = 0; i < codesize && !dat.codecopy[i]; ++i)
-//     ; /* find first nonempty */
-//   for(j = 0; i < codesize; ++i, ++j)
-//   {
-//     if(i)
-//       j <<= (dat.codecopy[i] - dat.codecopy[i-1]);
+// func SIT14_ReadTree(SIT14Data *dat, uint16 codesize, uint16 *result) void {
+// 	var size, i, j, k, l, m, n, o uint32
+// 	if len(result) < int(codesize)*2 {
+// 		//TODO: add error to log
+// 		return
+// 	}
 
-//     k = dat.codecopy[i]; m = 0;
-//     for(l = j; k--; l >>= 1)
-//       m = (m << 1) | (l&1);
+// 	k = xadIOGetBitsLow(dat.io, 1);
+// 	j = xadIOGetBitsLow(dat.io, 2)+2;
+// 	o = xadIOGetBitsLow(dat.io, 3)+1;
+// 	size = 1<<j;
+// 	m = size-1;
+// 	k = k ? m-1 : -1;
+// 	if(xadIOGetBitsLow(dat.io, 2)&1) /* skip 1 bit! */
+// 	{
+// 	  /* requirements for this call: dat.buff[32], dat.code[32], dat.freq[32*2] */
+// 	  SIT14_ReadTree(dat, size, dat.freq);
+// 	  for(i = 0; i < codesize; )
+// 	  {
+// 	    l = 0;
+// 	    do
+// 	    {
+// 	      l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
+// 	      n = size<<1;
+// 	    } while(n > l);
+// 	    l -= n;
+// 	    if(k != l)
+// 	    {
+// 	      if(l == m)
+// 	      {
+// 	        l = 0;
+// 	        do
+// 	        {
+// 	          l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
+// 	          n = size<<1;
+// 	        } while(n > l);
+// 	        l += 3-n;
+// 	        while(l--)
+// 	        {
+// 	          dat.code[i] = dat.code[i-1];
+// 	          ++i;
+// 	        }
+// 	      }
+// 	      else
+// 	        dat.code[i++] = l+o;
+// 	    }
+// 	    else
+// 	      dat.code[i++] = 0;
+// 	  }
+// 	}
+// 	else
+// 	{
+// 	  for(i = 0; i < codesize; )
+// 	  {
+// 	    l = xadIOGetBitsLow(dat.io, j);
+// 	    if(k != l)
+// 	    {
+// 	      if(l == m)
+// 	      {
+// 	        l = xadIOGetBitsLow(dat.io, j)+3;
+// 	        while(l--)
+// 	        {
+// 	          dat.code[i] = dat.code[i-1];
+// 	          ++i;
+// 	        }
+// 	      }
+// 	      else
+// 	        dat.code[i++] = l+o;
+// 	    }
+// 	    else
+// 	      dat.code[i++] = 0;
+// 	  }
+// 	}
 
-//     dat.buff[dat.freq[i]] = m;
-//   }
+// 	for(i = 0; i < codesize; ++i)
+// 	{
+// 	  dat.codecopy[i] = dat.code[i];
+// 	  dat.freq[i] = i;
+// 	}
+// 	SIT14_Update(0, codesize, dat.codecopy, dat.freq);
 
-//   for(i = 0; i < codesize*2; ++i)
-//     result[i] = 0;
+// 	for(i = 0; i < codesize && !dat.codecopy[i]; ++i)
+// 	  ; /* find first nonempty */
+// 	for(j = 0; i < codesize; ++i, ++j)
+// 	{
+// 	  if(i)
+// 	    j <<= (dat.codecopy[i] - dat.codecopy[i-1]);
 
-//   j = 2;
-//   for(i = 0; i < codesize; ++i)
-//   {
-//     l = 0;
-//     m = dat.buff[i];
+// 	  k = dat.codecopy[i]; m = 0;
+// 	  for(l = j; k--; l >>= 1)
+// 	    m = (m << 1) | (l&1);
 
-//     for(k = 0; k < dat.code[i]; ++k)
-//     {
-//       l += (m&1);
-//       if(dat.code[i]-1 <= k)
-//         result[l] = codesize*2+i;
-//       else
-//       {
-//         if(!result[l])
-//         {
-//           result[l] = j; j += 2;
-//         }
-//         l = result[l];
-//       }
-//       m >>= 1;
-//     }
-//   }
-//   xadIOByteBoundary(dat.io);
+// 	  dat.buff[dat.freq[i]] = m;
+// 	}
+
+// 	for(i = 0; i < codesize*2; ++i)
+// 	  result[i] = 0;
+
+// 	j = 2;
+// 	for(i = 0; i < codesize; ++i)
+// 	{
+// 	  l = 0;
+// 	  m = dat.buff[i];
+
+// 	  for(k = 0; k < dat.code[i]; ++k)
+// 	  {
+// 	    l += (m&1);
+// 	    if(dat.code[i]-1 <= k)
+// 	      result[l] = codesize*2+i;
+// 	    else
+// 	    {
+// 	      if(!result[l])
+// 	      {
+// 	        result[l] = j; j += 2;
+// 	      }
+// 	      l = result[l];
+// 	    }
+// 	    m >>= 1;
+// 	  }
+// 	}
+// 	xadIOByteBoundary(dat.io);
 // }
 
 // func  SIT_14(xadInOut *io) int32 {

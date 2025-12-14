@@ -29,6 +29,34 @@
 
 package sit
 
+import (
+	"bufio"
+)
+
+type SIT14Data struct {
+	br       *bufio.Reader
+	code     [308]uint8
+	codecopy [308]uint8
+	freq     [308]uint16
+	buff     [308]uint32
+
+	var1 [52]uint8
+	var2 [52]uint16
+	var3 [150]uint16 // 75*2
+	var4 [76]uint8
+	var5 [75]uint32
+	var6 [1024]uint8
+	var7 [616]uint16 // 308*2
+	var8 [0x4000]uint8
+
+	window [0x40000]uint8
+}
+
+type SITPrivate struct {
+	crc    uint16
+	method uint8
+}
+
 // const (
 // 	SIT_VERSION        = 1
 // 	SIT_REVISION       = 12
@@ -109,52 +137,45 @@ package sit
 // Window [0x40000]uint8
 // };
 
-// func  SIT14_Update(uint16 first, uint16 last, uint8 *code, uint16 *freq) void {
-// var i, j uint16
+// code used to be unit8, using uint16 here for now to avoid casting
+func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
+	var i, j uint16
 
-//   while(last-first > 1)
-//   {
-//     i = first;
-//     j = last;
-
-//     do
-//     {
-//       while(++i < last && code[first] > code[i])
-//         ;
-//       while(--j > first && code[first] < code[j])
-//         ;
-//       if(j > i)
-//       {
-// var t uint16;
-//         t = code[i]; code[i] = code[j]; code[j] = t;
-//         t = freq[i]; freq[i] = freq[j]; freq[j] = t;
-//       }
-//     } while(j > i);
-
-//     if(first != j)
-//     {
-//       {
-// var t uint16;
-//         t = code[first]; code[first] = code[j]; code[j] = t;
-//         t = freq[first]; freq[first] = freq[j]; freq[j] = t;
-//       }
-
-//       i = j+1;
-//       if(last-i <= j-first)
-//       {
-//         SIT14_Update(i, last, code, freq);
-//         last = j;
-//       }
-//       else
-//       {
-//         SIT14_Update(first, j, code, freq);
-//         first = i;
-//       }
-//     }
-//     else
-//       ++first;
-//   }
-// }
+	for last-first > 1 {
+		i = first
+		j = last
+		for j > i {
+			i++;
+			for i < last && code[first] > code[i] {
+				i++
+			}
+			j--
+			for j < last && code[first] < code[j] {
+				j--
+			}
+			if j > i {
+				var t uint16
+				t = code[i]; code[i] = code[j];	code[j] = t;
+				t = freq[i]; freq[i] = freq[j]; freq[j] = t;
+			}
+		}
+		if first != j {
+			var t uint16
+			t = code[first]; code[first] = code[j]; code[j] = t;
+			t = freq[first]; freq[first] = freq[j];	freq[j] = t;
+			i = j + 1
+			if last-i <= j-first {
+				SIT14_Update(i, last, code, freq)
+				last = j
+			} else {
+				SIT14_Update(first, j, code, freq)
+				first = i
+			}
+		} else {
+			first++
+		}
+	}
+}
 
 // func  SIT14_ReadTree(SIT14Data *dat, uint16 codesize, uint16 *result) void {
 // var size, i, j, k, l, m, n, o uint32

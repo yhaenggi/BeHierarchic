@@ -169,9 +169,17 @@ func byteBoundary(s *SIT14Data) {
 	if s.bits > 0 {
 		rem := s.bits % 8
 		if rem != 0 {
-			getBitsLow(uint8(rem))
+			getBitsLow(s, uint8(rem))
 		}
 	}
+}
+
+func uint8ToUint16Slice(src []uint8) []uint16 {
+    dst := make([]uint16, len(src))
+    for i, v := range src {
+        dst[i] = uint16(v)
+    }
+    return dst
 }
 
 // code used to be unit8, using uint16 here for now to avoid casting
@@ -287,6 +295,24 @@ func SIT14_ReadTree(s *SIT14Data, codesize uint16, result []uint16) {
 			}
 		}
 	}
+
+	i = 0
+	for i < uint32(codesize) {
+		s.codecopy[i] = s.code[i]
+		s.freq[i] = uint16(i)
+		i++
+	}
+
+	SIT14_Update(0, codesize, uint8ToUint16Slice(s.codecopy[:codesize]), s.freq[:codesize])
+
+	for i = 0; i < uint32(codesize) && s.codecopy[i] == 0; i++ {}
+	for j = 0; j < uint32(codesize); {
+
+
+		i++
+		j++
+	}
+
 	// TODO: continue here
 }
 

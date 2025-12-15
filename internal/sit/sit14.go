@@ -318,12 +318,29 @@ func SIT14_ReadTree(s *SIT14Data, codesize uint16, result []uint16) {
 		j++
 	}
 
-	for i = 0; i < uint32(codesize*2); {
+	for i = 0; i < uint32(codesize*2); i++ {
 		result[i] = 0
 	}
-	//13974
+	j = 2
+	for i = 0; i < uint32(codesize); i++ {
+		l = 0
+		m = s.buff[i]
 
-	// TODO: continue here
+		for k = 0; k < uint32(s.code[i]); k++ {
+			l += (m&1)
+			if s.code[i]-1 <= uint8(k) {
+				result[l] = codesize * 2 + uint16(i)
+			} else {
+				if result[l] == 0 {
+					result[l] = uint16(j)
+					j += 2
+				}
+				l = uint32(result[l])
+			}
+			m >>= 1
+		}
+	}
+	byteBoundary(s)
 }
 
 func sit14(r io.Reader, dstsize uint32) io.ReadCloser {

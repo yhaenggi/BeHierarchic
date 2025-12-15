@@ -409,224 +409,52 @@ func sit14copy(dst *io.PipeWriter, src io.Reader, dstsize uint32) {
 		}
 	}
 
-	//Line 1467
-	//TODO: continue here
+	m = getBitsLow(&s, 16) // number of blocks
+	j = 0 // window position
+
+	for m > 0 {
+		_, err := s.br.Peek(1)
+		if err != nil {
+			break
+		}
+		m--
+
+		for i = 0; i < 616; {
+			i = uint32(s.var7[i + getBitsLow(&s, 1)])
+		i -= 616
+		}
+		if i < 0x100 {
+			bw.WriteByte(byte(i))
+			s.window[j] = uint8(i)
+			j &= 0xFFFF
+			n--
+			j++
+		} else {
+			i -= 0x100
+			k = uint32(s.var2[i] + 4)
+			i = uint32(s.var1[i])
+			if i != 0 {
+				k += getBitsLow(&s, uint8(i))
+			}
+			for i = 0; i < 150; {
+				i = uint32(s.var3[i + getBitsLow(&s, 1)])
+			}
+			i -= 150
+			l = s.var5[i]
+			i = uint32(s.var4[i])
+			if i != 0 {
+				l += getBitsLow(&s, uint8(i))
+			}
+			n -= k
+			l = j + 0x40000 - l
+			for ;k > 0; k-- {
+				l &= 0x3FFFF
+				bw.WriteByte(s.window[l])
+				s.window[j] = s.window[l]
+				j++
+				l++
+			}
+		}
+		byteBoundary(&s)
+	}
 }
-
-// func SIT14_ReadTree(SIT14Data *dat, uint16 codesize, uint16 *result) void {
-// 	var size, i, j, k, l, m, n, o uint32
-// 	if len(result) < int(codesize)*2 {
-// 		//TODO: add error to log
-// 		return
-// 	}
-
-// 	k = xadIOGetBitsLow(dat.io, 1);
-// 	j = xadIOGetBitsLow(dat.io, 2)+2;
-// 	o = xadIOGetBitsLow(dat.io, 3)+1;
-// 	size = 1<<j;
-// 	m = size-1;
-// 	k = k ? m-1 : -1;
-// 	if(xadIOGetBitsLow(dat.io, 2)&1) /* skip 1 bit! */
-// 	{
-// 	  /* requirements for this call: dat.buff[32], dat.code[32], dat.freq[32*2] */
-// 	  SIT14_ReadTree(dat, size, dat.freq);
-// 	  for(i = 0; i < codesize; )
-// 	  {
-// 	    l = 0;
-// 	    do
-// 	    {
-// 	      l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
-// 	      n = size<<1;
-// 	    } while(n > l);
-// 	    l -= n;
-// 	    if(k != l)
-// 	    {
-// 	      if(l == m)
-// 	      {
-// 	        l = 0;
-// 	        do
-// 	        {
-// 	          l = dat.freq[l + xadIOGetBitsLow(dat.io, 1)];
-// 	          n = size<<1;
-// 	        } while(n > l);
-// 	        l += 3-n;
-// 	        while(l--)
-// 	        {
-// 	          dat.code[i] = dat.code[i-1];
-// 	          ++i;
-// 	        }
-// 	      }
-// 	      else
-// 	        dat.code[i++] = l+o;
-// 	    }
-// 	    else
-// 	      dat.code[i++] = 0;
-// 	  }
-// 	}
-// 	else
-// 	{
-// 	  for(i = 0; i < codesize; )
-// 	  {
-// 	    l = xadIOGetBitsLow(dat.io, j);
-// 	    if(k != l)
-// 	    {
-// 	      if(l == m)
-// 	      {
-// 	        l = xadIOGetBitsLow(dat.io, j)+3;
-// 	        while(l--)
-// 	        {
-// 	          dat.code[i] = dat.code[i-1];
-// 	          ++i;
-// 	        }
-// 	      }
-// 	      else
-// 	        dat.code[i++] = l+o;
-// 	    }
-// 	    else
-// 	      dat.code[i++] = 0;
-// 	  }
-// 	}
-
-// 	for(i = 0; i < codesize; ++i)
-// 	{
-// 	  dat.codecopy[i] = dat.code[i];
-// 	  dat.freq[i] = i;
-// 	}
-// 	SIT14_Update(0, codesize, dat.codecopy, dat.freq);
-
-// 	for(i = 0; i < codesize && !dat.codecopy[i]; ++i)
-// 	  ; /* find first nonempty */
-// 	for(j = 0; i < codesize; ++i, ++j)
-// 	{
-// 	  if(i)
-// 	    j <<= (dat.codecopy[i] - dat.codecopy[i-1]);
-
-// 	  k = dat.codecopy[i]; m = 0;
-// 	  for(l = j; k--; l >>= 1)
-// 	    m = (m << 1) | (l&1);
-
-// 	  dat.buff[dat.freq[i]] = m;
-// 	}
-
-// 	for(i = 0; i < codesize*2; ++i)
-// 	  result[i] = 0;
-
-// 	j = 2;
-// 	for(i = 0; i < codesize; ++i)
-// 	{
-// 	  l = 0;
-// 	  m = dat.buff[i];
-
-// 	  for(k = 0; k < dat.code[i]; ++k)
-// 	  {
-// 	    l += (m&1);
-// 	    if(dat.code[i]-1 <= k)
-// 	      result[l] = codesize*2+i;
-// 	    else
-// 	    {
-// 	      if(!result[l])
-// 	      {
-// 	        result[l] = j; j += 2;
-// 	      }
-// 	      l = result[l];
-// 	    }
-// 	    m >>= 1;
-// 	  }
-// 	}
-// 	xadIOByteBoundary(dat.io);
-// }
-
-// func  SIT_14(xadInOut *io) int32 {
-// var i j, k, l, m, n uint32
-//   var xadMasterBase *xadMasterBase = io.xio_xadMasterBase;
-//   var dat *SIT14Data
-
-//   if((dat = (SIT14Data *) xadAllocVec(XADM sizeof(SIT14Data), XADMEMF_ANY|XADMEMF_CLEAR)))
-//   {
-//     dat.io = io;
-
-//     /* initialization */
-//     for(i = k = 0; i < 52; ++i)
-//     {
-//       dat.var2[i] = k;
-//       k += (1<<(dat.var1[i] = ((i >= 4) ? ((i-4)>>2) : 0)));
-//     }
-//     for(i = 0; i < 4; ++i)
-//       dat.var8[i] = i;
-//     for(m = 1, l = 4; i < 0x4000; m <<= 1) /* i is 4 */
-//     {
-//       for(n = l+4; l < n; ++l)
-//       {
-//         for(j = 0; j < m; ++j)
-//           dat.var8[i++] = l;
-//       }
-//     }
-//     for(i = 0, k = 1; i < 75; ++i)
-//     {
-//       dat.var5[i] = k;
-//       k += (1<<(dat.var4[i] = (i >= 3 ? ((i-3)>>2) : 0)));
-//     }
-//     for(i = 0; i < 4; ++i)
-//       dat.var6[i] = i-1;
-//     for(m = 1, l = 3; i < 0x400; m <<= 1) /* i is 4 */
-//     {
-//       for(n = l+4; l < n; ++l)
-//       {
-//         for(j = 0; j < m; ++j)
-//           dat.var6[i++] = l;
-//       }
-//     }
-
-//     m = xadIOGetBitsLow(io, 16); /* number of blocks */
-//     j = 0; /* window position */
-//     while(m-- && !(io.xio_Flags & (XADIOF_ERROR|XADIOF_LASTOUTBYTE)))
-//     {
-//       /* these functions do not support access > 24 bit */
-//       xadIOGetBitsLow(io, 16); /* skip crunched block size */
-//       xadIOGetBitsLow(io, 16);
-//       n = xadIOGetBitsLow(io, 16); /* number of uncrunched bytes */
-//       n |= xadIOGetBitsLow(io, 16)<<16;
-//       SIT14_ReadTree(dat, 308, dat.var7);
-//       SIT14_ReadTree(dat, 75, dat.var3);
-
-//       while(n && !(io.xio_Flags & (XADIOF_ERROR|XADIOF_LASTOUTBYTE)))
-//       {
-//         for(i = 0; i < 616;)
-//           i = dat.var7[i + xadIOGetBitsLow(io, 1)];
-//         i -= 616;
-//         if(i < 0x100)
-//         {
-//           dat.Window[j++] = xadIOPutChar(io, i);
-//           j &= 0x3FFFF;
-//           --n;
-//         }
-//         else
-//         {
-//           i -= 0x100;
-//           k = dat.var2[i]+4;
-//           i = dat.var1[i];
-//           if(i)
-//             k += xadIOGetBitsLow(io, i);
-//           for(i = 0; i < 150;)
-//             i = dat.var3[i + xadIOGetBitsLow(io, 1)];
-//           i -= 150;
-//           l = dat.var5[i];
-//           i = dat.var4[i];
-//           if(i)
-//             l += xadIOGetBitsLow(io, i);
-//           n -= k;
-//           l = j+0x40000-l;
-//           while(k--)
-//           {
-//             l &= 0x3FFFF;
-//             dat.Window[j++] = xadIOPutChar(io, dat.Window[l++]);
-//             j &= 0x3FFFF;
-//           }
-//         }
-//       }
-//       xadIOByteBoundary(io);
-//     }
-//     xadFreeObjectA(XADM dat, 0);
-//   }
-//   return io.xio_Error;
-// }

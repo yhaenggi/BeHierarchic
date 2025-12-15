@@ -358,11 +358,58 @@ func sit14copy(dst *io.PipeWriter, src io.Reader, dstsize uint32) {
 		}
 	}()
 
-	var s SIT14Data
+	var s = SIT14Data{}
 	s.br = bufio.NewReaderSize(src, 4096)
 	bw := bufio.NewWriterSize(dst, 4096)
 	defer bw.Flush()
+	var i, j, k, l, m, n uint32
 
+	for i, k = 0, 0; i < 52; i++ {
+		s.var2[i] = uint16(k);
+		if i >= 4 {
+			s.var1[i] = uint8(i - 4) >> 2
+		} else {
+			s.var1[i] = 0
+		}
+		k += 1 << s.var1[i]
+	}
+
+	for i = 0; i < 4; i++ {
+		s.var8[i] = uint8(i)
+	}
+
+	for m, l = 1, 4; i < 0x4000; m <<= 1 {
+		for n = l + 4; l < n; l++ {
+			for j = 0; j < m; j++ {
+				s.var8[i] = uint8(l)
+				i++
+			}
+		}
+	}
+
+	for i, k = 0, 1; i < 75; i++ {
+		s.var5[i] = k
+		if i >= 3 {
+			s.var4[i] = uint8(i - 3) >> 2
+		} else {
+			s.var4[i] = 0
+		}
+	}
+
+	for i = 0; i < 4; i++ {
+		s.var6[i] = uint8(i - 1)
+	}
+
+	for m, l = 1, 3; i < 0x400; m <<= 1 {
+		for n = l + 4; l < n; l++ {
+			for j = 0; j < m; j++ {
+				s.var6[i] = uint8(l)
+				i++
+			}
+		}
+	}
+
+	//Line 1467
 	//TODO: continue here
 }
 

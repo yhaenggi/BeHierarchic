@@ -190,12 +190,10 @@ func SIT14_Update(first uint16, last uint16, code []uint16, freq []uint16) {
 		i = first
 		j = last
 		for j > i {
-			i++;
-			for i < last && code[first] > code[i] {
+			for i+1 < last && code[first] > code[i+1] {
 				i++
 			}
-			j--
-			for j > last && code[first] < code[j] {
+			for j-1 > last && code[first] < code[j-1] {
 				j--
 			}
 			if j > i {
@@ -296,8 +294,7 @@ func SIT14_ReadTree(s *SIT14Data, codesize uint16, result []uint16) {
 		}
 	}
 
-	i = 0
-	for i < uint32(codesize) {
+	for i = 0; i < uint32(codesize); {
 		s.codecopy[i] = s.code[i]
 		s.freq[i] = uint16(i)
 		i++
@@ -307,11 +304,24 @@ func SIT14_ReadTree(s *SIT14Data, codesize uint16, result []uint16) {
 
 	for i = 0; i < uint32(codesize) && s.codecopy[i] == 0; i++ {}
 	for j = 0; j < uint32(codesize); {
-
-
+		if i != 0 {
+			j <<= uint32(s.codecopy[i] - s.codecopy[i-1])
+		}
+		k = uint32(s.codecopy[i])
+		m = 0
+		for l = j; k > 0; k-- {
+			m = (m << 1) | (l&1)
+			l >>= 1
+		}
+		s.buff[s.freq[i]] = m
 		i++
 		j++
 	}
+
+	for i = 0; i < uint32(codesize*2); {
+		result[i] = 0
+	}
+	//13974
 
 	// TODO: continue here
 }
